@@ -13,6 +13,9 @@ The ReactDataSync documentation is available [here](https://github.com/mattszyma
 
 ## Other
 
+### Product Backlog
+ReactDataSync product backlog is located [here](https://github.com/mattszymanko/ReactDataSync/projects).
+
 ### Availability
 ReactDataSync is currently available as a [pre-release](https://github.com/mattszymanko/ReactDataSync/releases), with the goal of implementing further improvements and gathering extensive user feedback.
 
