@@ -1,4 +1,4 @@
-// my-framework/src/api/services/ApiService.ts
+// /src/api/services/ApiService.ts
 
 // Importing dependencies
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
@@ -58,6 +58,13 @@ class ApiService {
   use(middleware: (config: AxiosRequestConfig) => AxiosRequestConfig): void {
     this.api.interceptors.request.use(middleware);
   }
+  
+  // Method for paginated requests
+  export const getPaginatedData = (endpoint: string, page: number, pageSize: number) => {
+    return axios.get(`${config.API_BASE_URL}/${endpoint}`, {
+      params: { page, pageSize },
+    });
+  };  
 }
 
 export default ApiService;
