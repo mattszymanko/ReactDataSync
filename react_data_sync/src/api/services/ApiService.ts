@@ -22,7 +22,16 @@ class ApiService {
       console.log('Request Interceptor:', config);
       return config;
     });
-
+    
+    // Adding a global error interceptor
+    axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        logger.error(`API Request Error: ${error.message}`);
+        return Promise.reject(error);
+      }
+    );
+    
     // Adding response interceptors for logging or additional global response configurations
     this.api.interceptors.response.use((response: AxiosResponse) => {
       console.log('Response Interceptor:', response);
