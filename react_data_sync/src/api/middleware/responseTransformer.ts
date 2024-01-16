@@ -3,6 +3,9 @@
 // Importing dependencies
 import { AxiosResponse } from 'axios';
 
+// Define the response transformer middleware function type
+export type ResponseTransformer = (response: AxiosResponse) => AxiosResponse;
+
 // Response transformer middleware
 const responseTransformer = (response: AxiosResponse): AxiosResponse => {
   // Custom logic for transforming the response
