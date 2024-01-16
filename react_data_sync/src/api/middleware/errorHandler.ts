@@ -3,6 +3,9 @@
 // Importing dependencies
 import { AxiosError } from 'axios';
 
+// Define the error handler middleware function type
+export type ErrorHandler = (error: AxiosError) => Promise<AxiosError>;
+
 // Error handler middleware
 const errorHandler = (error: AxiosError): Promise<AxiosError> => {
   // Custom logic for handling API errors
