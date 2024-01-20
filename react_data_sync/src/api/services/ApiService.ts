@@ -6,6 +6,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 // Defining the ApiService class
 class ApiService {
   private api: AxiosInstance;
+  private cache: Map<string, any>;
 
   // Constructor to initialize Axios instance with base configuration
   constructor() {
@@ -17,6 +18,9 @@ class ApiService {
       },
     });
 
+    // Initialize cache
+    this.cache = new Map();
+    
     // Adding request interceptors for logging or additional global request configurations
     this.api.interceptors.request.use((config: AxiosRequestConfig) => {
       console.log('Request Interceptor:', config);
@@ -36,6 +40,9 @@ class ApiService {
     this.api.interceptors.response.use((response: AxiosResponse) => {
       console.log('Response Interceptor:', response);
       return response;
+      // Cache the response
+      this.cache.set(response.config.url || '', response.data);
+      return response;      
     });
   }
 
@@ -43,7 +50,15 @@ class ApiService {
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.api.get<T>(url, config);
     return response.data;
+    // Check if the response is already cached
+    if (this.cache.has(url)) {
+      console.log('Using cached response for:', url);
+      return this.cache.get(url);
   }
+    // Make a new request if not cached
+    const response = await this.api.get<T>(url, config);
+    return response.data;    
+  }  
 
   // Generic method for making POST requests
   async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
