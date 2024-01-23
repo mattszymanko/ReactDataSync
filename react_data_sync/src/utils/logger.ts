@@ -16,6 +16,11 @@ class Logger {
     this.logLevel = config.LOG_LEVEL as LogLevel;
   }
 
+  // Dynamic Logger Configuration
+  setLogLevel(level: LogLevel): void {
+    this.logLevel = level;
+  }
+
   private shouldLog(level: LogLevel): boolean {
     const levels = Object.values(LogLevel);
     const currentLevelIndex = levels.indexOf(this.logLevel);
