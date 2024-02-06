@@ -77,6 +77,11 @@ class ApiService {
     const response = await this.api.delete<T>(url, config);
     return response.data;
   }
+  
+  // Method to add custom headers to the axios request
+  export const getDataWithCustomHeaders = (endpoint: string, customHeaders: Record<string, string>) => {
+    return axios.get(`${config.API_BASE_URL}/${endpoint}`, { headers: { ...customHeaders } });
+  }
 
   // Method to add middleware to the ApiService instance
   use(middleware: (config: AxiosRequestConfig) => AxiosRequestConfig): void {
