@@ -83,6 +83,13 @@ class ApiService {
     return axios.get(`${config.API_BASE_URL}/${endpoint}`, { headers: { ...customHeaders } });
   }
 
+  // Method for flexible middleware chaining 
+  export const createMiddlewareChain = (...middlewares: MiddlewareFunction[]) => {
+    return (request, next) => {
+      middlewares.forEach(middleware => middleware(request, next));
+    }
+  }
+
   // Method to add middleware to the ApiService instance
   use(middleware: (config: AxiosRequestConfig) => AxiosRequestConfig): void {
     this.api.interceptors.request.use(middleware);
