@@ -1,106 +1,116 @@
 // /src/api/services/ApiService.ts
 
-// Importing dependencies
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import config from '../../config';
+import logger from '../../utils/logger';
 
-// Defining the ApiService class
+type MiddlewareFunction = (config: AxiosRequestConfig) => AxiosRequestConfig;
+
 class ApiService {
   private api: AxiosInstance;
   private cache: Map<string, any>;
 
-  // Constructor to initialize Axios instance with base configuration
   constructor() {
     this.api = axios.create({
-      baseURL: process.env.REACT_APP_API_BASE_URL || 'https://api.example.com',
-      timeout: 10000, // 10 seconds timeout
+      baseURL: process.env.REACT_APP_API_BASE_URL || config.API.BASE_URL,
+      timeout: config.API.TIMEOUT,
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    // Initialize cache
     this.cache = new Map();
-    
-    // Adding request interceptors for logging or additional global request configurations
-    this.api.interceptors.request.use((config: AxiosRequestConfig) => {
-      console.log('Request Interceptor:', config);
-      return config;
-    });
-    
-    // Adding a global error interceptor
-    axios.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        logger.error(`API Request Error: ${error.message}`);
+
+    this.setupInterceptors();
+  }
+
+  private setupInterceptors(): void {
+    this.api.interceptors.request.use(
+      (config: AxiosRequestConfig) => {
+        logger.debug('Request Interceptor:', config);
+        return config;
+      },
+      (error: AxiosError) => {
+        logger.error('Request Error Interceptor:', error);
         return Promise.reject(error);
       }
     );
-    
-    // Adding response interceptors for logging or additional global response configurations
-    this.api.interceptors.response.use((response: AxiosResponse) => {
-      console.log('Response Interceptor:', response);
-      return response;
-      // Cache the response
-      this.cache.set(response.config.url || '', response.data);
-      return response;      
-    });
+
+    this.api.interceptors.response.use(
+      (response: AxiosResponse) => {
+        logger.debug('Response Interceptor:', response);
+        this.cacheResponse(response);
+        return response;
+      },
+      (error: AxiosError) => {
+        logger.error('Response Error Interceptor:', error);
+        return Promise.reject(error);
+      }
+    );
   }
 
-  // Generic method for making GET requests
-  async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.get<T>(url, config);
-    return response.data;
-    // Check if the response is already cached
-    if (this.cache.has(url)) {
-      console.log('Using cached response for:', url);
-      return this.cache.get(url);
-  }
-    // Make a new request if not cached
-    const response = await this.api.get<T>(url, config);
-    return response.data;    
-  }  
-
-  // Generic method for making POST requests
-  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.post<T>(url, data, config);
-    return response.data;
-  }
-
-  // Generic method for making PUT requests
-  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.put<T>(url, data, config);
-    return response.data;
-  }
-
-  // Generic method for making DELETE requests
-  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.delete<T>(url, config);
-    return response.data;
-  }
-  
-  // Method to add custom headers to the axios request
-  export const getDataWithCustomHeaders = (endpoint: string, customHeaders: Record<string, string>) => {
-    return axios.get(`${config.API_BASE_URL}/${endpoint}`, { headers: { ...customHeaders } });
-  }
-
-  // Method for flexible middleware chaining 
-  export const createMiddlewareChain = (...middlewares: MiddlewareFunction[]) => {
-    return (request, next) => {
-      middlewares.forEach(middleware => middleware(request, next));
+  private cacheResponse(response: AxiosResponse): void {
+    const url = response.config.url;
+    if (url) {
+      this.cache.set(url, response.data);
     }
   }
 
-  // Method to add middleware to the ApiService instance
-  use(middleware: (config: AxiosRequestConfig) => AxiosRequestConfig): void {
+  private async handleRequest<T>(
+    method: 'get' | 'post' | 'put' | 'delete',
+    url: string,
+    config?: AxiosRequestConfig,
+    data?: any
+  ): Promise<T> {
+    try {
+      if (method === 'get' && this.cache.has(url)) {
+        logger.debug('Using cached response for:', url);
+        return this.cache.get(url);
+      }
+
+      const response = await this.api[method]<T>(url, data, config);
+      return response.data;
+    } catch (error) {
+      logger.error(`${method.toUpperCase()} Request Error:`, error);
+      throw error;
+    }
+  }
+
+  async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return this.handleRequest<T>('get', url, config);
+  }
+
+  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    return this.handleRequest<T>('post', url, config, data);
+  }
+
+  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    return this.handleRequest<T>('put', url, config, data);
+  }
+
+  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return this.handleRequest<T>('delete', url, config);
+  }
+
+  getDataWithCustomHeaders(endpoint: string, customHeaders: Record<string, string>) {
+    return this.api.get(`${endpoint}`, { headers: { ...customHeaders } });
+  }
+
+  createMiddlewareChain(...middlewares: MiddlewareFunction[]) {
+    return (config: AxiosRequestConfig): AxiosRequestConfig => {
+      return middlewares.reduce((acc, middleware) => middleware(acc), config);
+    };
+  }
+
+  use(middleware: MiddlewareFunction): void {
     this.api.interceptors.request.use(middleware);
   }
-  
-  // Method for paginated requests
-  export const getPaginatedData = (endpoint: string, page: number, pageSize: number) => {
-    return axios.get(`${config.API_BASE_URL}/${endpoint}`, {
+
+  getPaginatedData(endpoint: string, page: number, pageSize: number) {
+    return this.api.get(`${endpoint}`, {
       params: { page, pageSize },
     });
-  };  
+  }
 }
 
 export default ApiService;
