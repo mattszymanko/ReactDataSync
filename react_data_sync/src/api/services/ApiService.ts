@@ -1,7 +1,7 @@
 // /src/api/services/ApiService.ts
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import config from '../../config';
+import config from '../../../apiConfig';
 import logger from '../../utils/logger';
 
 type MiddlewareFunction = (config: AxiosRequestConfig) => AxiosRequestConfig;
