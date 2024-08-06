@@ -1,6 +1,6 @@
 // /src/utils/logger.ts
 
-import config from '../config';
+import config from '../../apiConfig';
 
 enum LogLevel {
   DEBUG = 'debug',
