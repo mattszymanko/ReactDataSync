@@ -9,11 +9,13 @@ type MiddlewareFunction = (config: AxiosRequestConfig) => AxiosRequestConfig;
 class ApiService {
   private api: AxiosInstance;
   private cache: Map<string, any>;
+  private globalTimeout: number;
 
   constructor() {
+    this.globalTimeout = config.API.DEFAULT_TIMEOUT;
     this.api = axios.create({
       baseURL: process.env.REACT_APP_API_BASE_URL || config.API.BASE_URL,
-      timeout: config.API.TIMEOUT,
+      timeout: this.globalTimeout,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -56,6 +58,14 @@ class ApiService {
     }
   }
 
+  private getTimeoutForEndpoint(url: string): number {
+    const endpoint = Object.entries(config.API.ENDPOINTS).find(([_, value]) => url.startsWith(value));
+    if (endpoint) {
+      return config.API.ENDPOINT_TIMEOUTS[endpoint[0]] || this.globalTimeout;
+    }
+    return this.globalTimeout;
+  }
+
   private async handleRequest<T>(
     method: 'get' | 'post' | 'put' | 'delete',
     url: string,
@@ -68,7 +78,10 @@ class ApiService {
         return this.cache.get(url);
       }
 
-      const response = await this.api[method]<T>(url, data, config);
+      const timeout = config?.timeout || this.getTimeoutForEndpoint(url);
+      const requestConfig = { ...config, timeout };
+
+      const response = await this.api[method]<T>(url, method === 'get' || method === 'delete' ? requestConfig : data, requestConfig);
       return response.data;
     } catch (error) {
       logger.error(`${method.toUpperCase()} Request Error:`, error);
@@ -110,6 +123,11 @@ class ApiService {
     return this.api.get(`${endpoint}`, {
       params: { page, pageSize },
     });
+  }
+
+  setGlobalTimeout(timeout: number): void {
+    this.globalTimeout = timeout;
+    this.api.defaults.timeout = timeout;
   }
 }
 
